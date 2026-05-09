@@ -52,7 +52,7 @@ function Sidebar({ active, setActive, currentUser, workers, tasks, onSwitchUser 
       ))}
 
       <div className="tf-nav-section">Categorías</div>
-      {TF_CATS.slice(0, 5).map(c => {
+      {TF_CATS.map(c => {
         const count = tasks.filter(t => t.category === c && t.status !== "completada").length;
         return (
           <div key={c} className="tf-nav-item" style={{ fontSize: 12.5, padding: "7px 10px" }}>
