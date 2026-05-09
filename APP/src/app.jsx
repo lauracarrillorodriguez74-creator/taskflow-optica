@@ -185,7 +185,20 @@ function App() {
   const liveTask = openTask ? tasks.find(t => t.id === openTask.id) : null;
 
   return (
-    <div className="tf-app">
+  if (window.innerWidth < 900) {
+  return (
+    <MobileWorkerView
+      currentUser={currentUser}
+      workers={workers}
+      tasks={tasks}
+      updateTaskStatus={updateTaskStatus}
+      onSwitchUser={() => setShowSwitcher(true)}
+    />
+  );
+}
+
+return (
+  <div className="tf-app">
       <Sidebar active={active} setActive={setActive}
                currentUser={currentUser} workers={workers} tasks={tasks}
                onSwitchUser={() => setShowSwitcher(true)}/>
