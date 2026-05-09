@@ -162,7 +162,9 @@ window.SUPABASE_CONFIG = {
 
     // Frame switcher (from Tweaks)
     window.addEventListener('tf-frame', (e) => {
-      if (e.detail === 'fullscreen') document.body.classList.add('fs-mode');
+      if (e.detail === 'fullscreen') if (window.innerWidth < 900) {
+  document.body.classList.add('fs-mode');
+}
       else document.body.classList.remove('fs-mode');
       fitIpad();
     });
