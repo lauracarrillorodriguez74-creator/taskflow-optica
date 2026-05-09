@@ -168,10 +168,7 @@ window.SUPABASE_CONFIG = {
     });
 
     // Apply persisted frame on load
-    try {
-      const saved = JSON.parse(localStorage.getItem('__edit_mode_keys__') || '{}');
-      if (saved && saved.frame === 'fullscreen') document.body.classList.add('fs-mode');
-    } catch {}
+   document.body.classList.add('fs-mode');
   </script>
 
   <!-- App scripts (order matters) -->
