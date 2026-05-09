@@ -28,19 +28,109 @@ const tfStorage = {
 
 // ── Seed data ────────────────────────────────────────────────────
 const TF_STORES   = ["Centro", "Ensanche", "Norte"];
-const TF_CATS     = ["Clinica", "Ventas", "Audiologia", "Taller", "Incidencias", "Seguimiento", "Administracion"];
+const TF_CATS     = ["Clinica", "Ventas", "Audiologia", "Taller", "Incidencias", "Seguimiento", "Inventario", "Limpieza", "Administracion"];
 const TF_PRIOS    = ["baja", "media", "alta", "critica"];
 const TF_STATUSES = ["pendiente", "proceso", "bloqueada", "urgente", "completada"];
 
 const TF_WORKERS_SEED = [
-  { id: "w1", name: "Lucía Marín",   role: "Optometrista",         store: "Centro",   color: "#2E7BC4", status: "online",  initials: "LM" },
-  { id: "w2", name: "Daniel Vega",   role: "Audioprotesista",      store: "Centro",   color: "#7A5AE0", status: "online",  initials: "DV" },
-  { id: "w3", name: "Carla Ruiz",    role: "Asesora de ventas",    store: "Ensanche", color: "#1E8F73", status: "busy",    initials: "CR" },
-  { id: "w4", name: "Mateo Torres",  role: "Técnico de taller",    store: "Centro",   color: "#C58A1B", status: "online",  initials: "MT" },
-  { id: "w5", name: "Elena Bravo",   role: "Recepción",            store: "Norte",    color: "#D14B43", status: "online",  initials: "EB" },
-  { id: "w6", name: "Hugo Salas",    role: "Optometrista",         store: "Ensanche", color: "#2A6FDB", status: "offline", initials: "HS" },
-  { id: "w7", name: "Nora Aguilar",  role: "Asesora de ventas",    store: "Norte",    color: "#1E5B94", status: "online",  initials: "NA" },
-  { id: "w8", name: "Iván Pardo",    role: "Gerente",              store: "Centro",   color: "#0B2F5B", status: "busy",    initials: "IP" },
+  {
+  id: "w0",
+  name: "Sin asignar",
+  role: "Pendiente de asignación",
+  store: "3 Centros",
+  color: "#94A3B8",
+  status: "online"
+},
+
+  {
+    id: "w1",
+    name: "Laura C.",
+    role: "Directora General",
+    store: "3 Centros",
+    color: "#0B2F5B",
+    status: "online"
+  },
+
+  {
+    id: "w2",
+    name: "Natalia M.",
+    role: "Directora · Optometrista · Audio",
+    store: "3 Centros",
+    color: "#2E7BC4",
+    status: "online"
+  },
+
+  {
+    id: "w3",
+    name: "Raquel L.",
+    role: "Vendedora",
+    store: "3 Centros",
+    color: "#7A5AE0",
+    status: "online"
+  },
+
+  {
+    id: "w4",
+    name: "María del Mar L.",
+    role: "Adjunta · Vendedora · Audio",
+    store: "3 Centros",
+    color: "#1E8F73",
+    status: "online"
+  },
+
+  {
+    id: "w5",
+    name: "María Angeles C.",
+    role: "Optometrista",
+    store: "3 Centros",
+    color: "#C58A1B",
+    status: "online"
+  },
+
+  {
+    id: "w6",
+    name: "Mercedes M.",
+    role: "Vendedora",
+    store: "3 Centros",
+    color: "#D14B43",
+    status: "online"
+  },
+
+  {
+    id: "w7",
+    name: "Raúl T.",
+    role: "Optometrista · Audio",
+    store: "3 Centros",
+    color: "#2A6FDB",
+    status: "online"
+  },
+
+  {
+    id: "w8",
+    name: "Montse G.",
+    role: "Optometrista",
+    store: "3 Centros",
+    color: "#1E5B94",
+    status: "online"
+  },
+
+  {
+    id: "w9",
+    name: "Álvaro M.",
+    role: "CEO",
+    store: "3 Centros",
+    color: "#0E7490",
+    status: "busy"
+  },
+
+  {
+    id: "w10",
+    name: "Arwa A.",
+    role: "Optometrista · Audio",
+    store: "3 Centros",
+    color: "#9333EA",
+    status: "online"
+  }
 ];
 
 // Generate a stable but realistic set of tasks
@@ -51,63 +141,7 @@ function tfDays(n) {
   return d.toISOString();
 }
 
-const TF_TASKS_SEED = [
-  // CLINICA
-  { title: "Revisión visual completa — Sra. Mendoza",        cat: "Clinica",        pri: "alta",    st: "proceso",     a: "w1", d: 0,  notes: "Cita 12:30. Revisar progresivos prescritos hace 6 meses." },
-  { title: "Adaptación de lentes de contacto multifocales",  cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w1", d: 1,  notes: "Primer ajuste, llevar muestra Air Optix Multifocal." },
-  { title: "Control postoperatorio LASIK — D. Romero",       cat: "Clinica",        pri: "alta",    st: "pendiente",   a: "w6", d: 2,  notes: "Día 14 post-cirugía. Verificar agudeza visual." },
-  { title: "Topografía corneal Sr. Ortega",                  cat: "Clinica",        pri: "media",   st: "completada",  a: "w1", d: -2 },
-  { title: "Examen pediátrico — Familia Ribas",              cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w6", d: 3 },
-
-  // AUDIOLOGIA
-  { title: "Adaptación audífonos Phonak Lumity",             cat: "Audiologia",     pri: "alta",    st: "proceso",     a: "w2", d: 0,  notes: "Cliente prueba 7 días, ajustar programas." },
-  { title: "Revisión audiometría tonal Sra. Quirós",         cat: "Audiologia",     pri: "media",   st: "pendiente",   a: "w2", d: 1 },
-  { title: "Mantenimiento técnico — audífonos Oticon",       cat: "Audiologia",     pri: "baja",    st: "pendiente",   a: "w2", d: 4 },
-  { title: "Seguimiento 30 días — Sr. Iglesias",             cat: "Seguimiento",    pri: "media",   st: "completada",  a: "w2", d: -1 },
-
-  // VENTAS
-  { title: "Presupuesto Tom Ford TF5398 + cristales Zeiss",  cat: "Ventas",         pri: "media",   st: "proceso",     a: "w3", d: 0 },
-  { title: "Llamada cliente — recordatorio gafas listas",    cat: "Ventas",         pri: "baja",    st: "pendiente",   a: "w7", d: 0 },
-  { title: "Entrega monturas Persol — Sr. Bonilla",          cat: "Ventas",         pri: "alta",    st: "urgente",     a: "w3", d: 0,  notes: "Cliente llega a las 17:00, prioridad máxima." },
-  { title: "Cierre venta progresivos premium familia López", cat: "Ventas",         pri: "alta",    st: "proceso",     a: "w7", d: 1 },
-  { title: "Catálogo nuevas Lindberg para showcase",         cat: "Ventas",         pri: "baja",    st: "pendiente",   a: "w3", d: 5 },
-  { title: "Devolución cristales defectuosos a proveedor",   cat: "Ventas",         pri: "media",   st: "bloqueada",   a: "w3", d: -1, notes: "Esperando autorización del proveedor." },
-
-  // TALLER
-  { title: "Montaje cristales Zeiss DriveSafe — pedido #4821", cat: "Taller",       pri: "alta",    st: "proceso",     a: "w4", d: 0 },
-  { title: "Reparación bisagra montura Cartier",             cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 1 },
-  { title: "Calibrado biselador automático",                 cat: "Taller",         pri: "alta",    st: "bloqueada",   a: "w4", d: -1, notes: "Falta pieza, llega martes." },
-  { title: "Tallado lentes pedido #4825",                    cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 2 },
-  { title: "Ajuste plaquetas titanium 12 monturas",          cat: "Taller",         pri: "baja",    st: "completada",  a: "w4", d: -3 },
-
-  // INCIDENCIAS
-  { title: "Cliente Sr. Vidal — queja por reflejos",         cat: "Incidencias",    pri: "critica", st: "urgente",     a: "w8", d: 0,  notes: "Llamar antes de las 11:00. Posible cambio de cristales." },
-  { title: "Pedido extraviado — proveedor Essilor",          cat: "Incidencias",    pri: "alta",    st: "bloqueada",   a: "w8", d: -1 },
-  { title: "Reclamación seguro Adeslas — Sra. Garrido",      cat: "Incidencias",    pri: "alta",    st: "proceso",     a: "w5", d: 1 },
-  { title: "Cristal roto en montaje — pedido #4810",         cat: "Incidencias",    pri: "media",   st: "completada",  a: "w4", d: -2 },
-
-  // SEGUIMIENTO
-  { title: "Encuesta satisfacción 23 clientes Octubre",      cat: "Seguimiento",    pri: "baja",    st: "pendiente",   a: "w5", d: 6 },
-  { title: "Recordatorio revisión anual — 14 pacientes",     cat: "Seguimiento",    pri: "media",   st: "proceso",     a: "w5", d: 2 },
-  { title: "Confirmación citas semana próxima",              cat: "Seguimiento",    pri: "media",   st: "pendiente",   a: "w5", d: 1 },
-  { title: "Llamada 6 meses post-adaptación lentillas",      cat: "Seguimiento",    pri: "baja",    st: "completada",  a: "w1", d: -4 },
-
-  // ADMINISTRACION
-  { title: "Cierre caja semanal — tienda Centro",            cat: "Administracion", pri: "alta",    st: "pendiente",   a: "w8", d: 0 },
-  { title: "Subir facturas Octubre a gestoría",              cat: "Administracion", pri: "media",   st: "proceso",     a: "w8", d: 2 },
-  { title: "Inventario monturas tienda Norte",               cat: "Administracion", pri: "media",   st: "pendiente",   a: "w5", d: 3 },
-  { title: "Renovar contrato proveedor cristales Hoya",      cat: "Administracion", pri: "alta",    st: "pendiente",   a: "w8", d: 4 },
-  { title: "Formación equipo — nueva caja registradora",     cat: "Administracion", pri: "baja",    st: "completada",  a: "w8", d: -5 },
-
-  // Mix extra
-  { title: "Reposición vitrina sol Ray-Ban — tienda Ensanche", cat: "Ventas",       pri: "baja",    st: "completada",  a: "w3", d: -1 },
-  { title: "Visita comercial proveedor Lindberg",            cat: "Ventas",         pri: "media",   st: "pendiente",   a: "w8", d: 5 },
-  { title: "Auditoría de lentes en stock",                   cat: "Administracion", pri: "media",   st: "proceso",     a: "w5", d: 1 },
-  { title: "Cliente sin cita — Sr. Hernández",               cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w1", d: 0 },
-  { title: "Llamada técnica Phonak — software target",       cat: "Audiologia",     pri: "alta",    st: "proceso",     a: "w2", d: 0 },
-  { title: "Recogida producto envío Norte → Centro",         cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 1 },
-];
-
+const TF_TASKS_SEED = [];
 function tfBuildSeed() {
   const tasks = TF_TASKS_SEED.map((t, i) => ({
     id: `t${(i + 1).toString().padStart(3, "0")}`,
@@ -131,14 +165,14 @@ function tfBuildSeed() {
 
 function tfEnsureSeed() {
   const meta = tfStorage.get(TF_KEYS.meta, null);
-  if (meta && meta.version === 1) return;
+  if (meta && meta.version === 4) return;
   const seed = tfBuildSeed();
   tfStorage.set(TF_KEYS.workers, seed.workers);
   tfStorage.set(TF_KEYS.tasks,   seed.tasks);
   tfStorage.set(TF_KEYS.history, [
     { id: "h1", at: new Date().toISOString(), actor: "w8", action: "seed", payload: { tasks: seed.tasks.length } }
   ]);
-  tfStorage.set(TF_KEYS.meta, { version: 1, seededAt: new Date().toISOString() });
+  tfStorage.set(TF_KEYS.meta, { version: 4, seededAt: new Date().toISOString() });
 }
 
 // ── React hooks ──────────────────────────────────────────────────
@@ -237,6 +271,9 @@ const TF_LABELS = {
     Taller: "Taller",
     Incidencias: "Incidencias",
     Seguimiento: "Seguimiento",
+    Seguimiento: "Seguimiento",
+    Inventario: "Inventario",
+    Limpieza: "Limpieza",
     Administracion: "Administración",
   }
 };
