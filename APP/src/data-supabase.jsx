@@ -1,198 +1,246 @@
-// TASKFLOW · Supabase data layer
+// TASKFLOW · Data layer
 // ─────────────────────────────────────────────────────────────────
-// DROP-IN REPLACEMENT for data.jsx.
-// Same exposed API: useTaskflow(), TF_LABELS, tfFmtDate, tfIsOverdue, etc.
-// To activate: in index.html, replace <script src="src/data.jsx"> with this file.
-//
-// Requires:
-//   1. Supabase project created.
-//   2. SQL files supabase/01_schema.sql, 02_policies.sql executed.
-//   3. <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> loaded BEFORE this file.
-//   4. window.SUPABASE_CONFIG = { url, anonKey } set before this loads.
+// Storage abstraction. Today: localStorage. Tomorrow: Supabase.
+// To migrate, swap implementations of `tfStorage.get/set`.
 // ─────────────────────────────────────────────────────────────────
 
+const TF_KEYS = {
+  workers: "taskflow:workers",
+  tasks:   "taskflow:tasks",
+  history: "taskflow:history",
+  meta:    "taskflow:meta",
+};
+
+const tfStorage = {
+  get(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
+  reset() {
+    Object.values(TF_KEYS).forEach(k => localStorage.removeItem(k));
+  }
+};
+
+// ── Seed data ────────────────────────────────────────────────────
 const TF_STORES   = ["Centro", "Ensanche", "Norte"];
 const TF_CATS     = ["Clinica", "Ventas", "Audiologia", "Taller", "Incidencias", "Seguimiento", "Administracion"];
 const TF_PRIOS    = ["baja", "media", "alta", "critica"];
 const TF_STATUSES = ["pendiente", "proceso", "bloqueada", "urgente", "completada"];
 
-const TF_LABELS = {
-  status: { pendiente: "Pendiente", proceso: "En proceso", bloqueada: "Bloqueada", urgente: "Urgente", completada: "Completada" },
-  priority: { baja: "Baja", media: "Media", alta: "Alta", critica: "Crítica" },
-  category: { Clinica: "Clínica", Ventas: "Ventas", Audiologia: "Audiología", Taller: "Taller", Incidencias: "Incidencias", Seguimiento: "Seguimiento", Administracion: "Administración" }
-};
+const TF_WORKERS_SEED = [
+  { id: "w1", name: "Lucía Marín",   role: "Optometrista",         store: "Centro",   color: "#2E7BC4", status: "online",  initials: "LM" },
+  { id: "w2", name: "Daniel Vega",   role: "Audioprotesista",      store: "Centro",   color: "#7A5AE0", status: "online",  initials: "DV" },
+  { id: "w3", name: "Carla Ruiz",    role: "Asesora de ventas",    store: "Ensanche", color: "#1E8F73", status: "busy",    initials: "CR" },
+  { id: "w4", name: "Mateo Torres",  role: "Técnico de taller",    store: "Centro",   color: "#C58A1B", status: "online",  initials: "MT" },
+  { id: "w5", name: "Elena Bravo",   role: "Recepción",            store: "Norte",    color: "#D14B43", status: "online",  initials: "EB" },
+  { id: "w6", name: "Hugo Salas",    role: "Optometrista",         store: "Ensanche", color: "#2A6FDB", status: "offline", initials: "HS" },
+  { id: "w7", name: "Nora Aguilar",  role: "Asesora de ventas",    store: "Norte",    color: "#1E5B94", status: "online",  initials: "NA" },
+  { id: "w8", name: "Iván Pardo",    role: "Gerente",              store: "Centro",   color: "#0B2F5B", status: "busy",    initials: "IP" },
+];
 
-// ── Supabase client ──────────────────────────────────────────────
-const tfSupabase = (() => {
-  const cfg = window.SUPABASE_CONFIG;
-  if (!cfg?.url || !cfg?.anonKey) {
-    console.error("[TASKFLOW] Falta window.SUPABASE_CONFIG = { url, anonKey } antes de cargar data-supabase.jsx");
-    return null;
-  }
-  if (!window.supabase?.createClient) {
-    console.error("[TASKFLOW] Falta supabase-js. Añade <script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>");
-    return null;
-  }
-  return window.supabase.createClient(cfg.url, cfg.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-    realtime: { params: { eventsPerSecond: 10 } },
-  });
-})();
-
-// Map row → in-memory task object (camelCase) consistent with data.jsx
-const rowToTask = (r) => ({
-  id: r.id,
-  title: r.title,
-  notes: r.notes || "",
-  category: r.category,
-  priority: r.priority,
-  status: r.status,
-  dueDate: r.due_date,
-  assignee: r.assignee_id,
-  createdBy: r.created_by,
-  checklist: r.checklist || [],
-  createdAt: r.created_at,
-  updatedAt: r.updated_at,
-});
-const taskToRow = (t) => ({
-  title: t.title,
-  notes: t.notes ?? "",
-  category: t.category,
-  priority: t.priority,
-  status: t.status,
-  due_date: t.dueDate,
-  assignee_id: t.assignee || null,
-  created_by: t.createdBy || null,
-  checklist: t.checklist ?? [],
-});
-const rowToWorker = (r) => ({
-  id: r.id, name: r.name, role: r.role, store: r.store,
-  color: r.color, initials: r.initials, status: r.status,
-  isManager: r.is_manager, authId: r.auth_id, avatarUrl: r.avatar_url,
-});
-const rowToHistory = (r) => ({
-  id: r.id, at: r.created_at, action: r.action,
-  payload: r.payload || {}, actor: r.actor_id,
-});
-
-// ── Hook ─────────────────────────────────────────────────────────
-const { useState, useEffect, useMemo, useCallback, useRef } = React;
-
-function useTaskflow() {
-  const [workers, setWorkers] = useState([]);
-  const [tasks, setTasks]     = useState([]);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-
-  // Initial fetch + realtime subscriptions
-  useEffect(() => {
-    if (!tfSupabase) { setError("Supabase no configurado"); setLoading(false); return; }
-    let mounted = true;
-
-    (async () => {
-      try {
-        const [w, t, h] = await Promise.all([
-          tfSupabase.from("workers").select("*").order("name"),
-          tfSupabase.from("tasks").select("*").order("created_at", { ascending: false }),
-          tfSupabase.from("task_history").select("*").order("created_at", { ascending: false }).limit(200),
-        ]);
-        if (!mounted) return;
-        if (w.error) throw w.error;
-        if (t.error) throw t.error;
-        if (h.error) throw h.error;
-        setWorkers(w.data.map(rowToWorker));
-        setTasks(t.data.map(rowToTask));
-        setHistory(h.data.map(rowToHistory));
-      } catch (err) {
-        console.error("[TASKFLOW] fetch error", err);
-        setError(err.message || String(err));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-
-    // Realtime
-    const ch = tfSupabase
-      .channel("taskflow")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (p) => {
-        setTasks(prev => {
-          if (p.eventType === "INSERT") return [rowToTask(p.new), ...prev];
-          if (p.eventType === "UPDATE") return prev.map(x => x.id === p.new.id ? rowToTask(p.new) : x);
-          if (p.eventType === "DELETE") return prev.filter(x => x.id !== p.old.id);
-          return prev;
-        });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "workers" }, (p) => {
-        setWorkers(prev => {
-          if (p.eventType === "INSERT") return [...prev, rowToWorker(p.new)];
-          if (p.eventType === "UPDATE") return prev.map(x => x.id === p.new.id ? rowToWorker(p.new) : x);
-          if (p.eventType === "DELETE") return prev.filter(x => x.id !== p.old.id);
-          return prev;
-        });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_history" }, (p) => {
-        setHistory(prev => [rowToHistory(p.new), ...prev].slice(0, 200));
-      })
-      .subscribe();
-
-    return () => { mounted = false; tfSupabase.removeChannel(ch); };
-  }, []);
-
-  // ── Mutations ──────────────────────────────────────────────────
-  const upsertTask = useCallback(async (task, actor) => {
-    const row = taskToRow(task);
-    if (task.id) {
-      const { error } = await tfSupabase.from("tasks").update(row).eq("id", task.id);
-      if (error) console.error(error);
-      else await tfSupabase.from("task_history").insert({
-        task_id: task.id, actor_id: actor || null, action: "update", payload: { title: task.title }
-      });
-    } else {
-      const { data, error } = await tfSupabase.from("tasks").insert(row).select().single();
-      if (error) console.error(error);
-      else if (data) await tfSupabase.from("task_history").insert({
-        task_id: data.id, actor_id: actor || null, action: "create", payload: { title: task.title }
-      });
-    }
-  }, []);
-
-  const updateTaskStatus = useCallback(async (taskId, status) => {
-    // Trigger log_task_status_change in DB will record history automatically
-    const { error } = await tfSupabase.from("tasks").update({ status }).eq("id", taskId);
-    if (error) console.error(error);
-  }, []);
-
-  const deleteTask = useCallback(async (taskId, actor) => {
-    await tfSupabase.from("task_history").insert({
-      task_id: taskId, actor_id: actor || null, action: "delete", payload: {}
-    });
-    const { error } = await tfSupabase.from("tasks").delete().eq("id", taskId);
-    if (error) console.error(error);
-  }, []);
-
-  const setWorkerStatus = useCallback(async (workerId, status) => {
-    const { error } = await tfSupabase.from("workers").update({ status }).eq("id", workerId);
-    if (error) console.error(error);
-  }, []);
-
-  const resetData = useCallback(() => {
-    alert("En modo Supabase los datos viven en la base. Resetea desde el SQL editor si lo necesitas.");
-  }, []);
-
-  const addHistory = useCallback(async (action, payload, actor) => {
-    await tfSupabase.from("task_history").insert({
-      task_id: payload?.taskId || null, actor_id: actor || null, action, payload
-    });
-  }, []);
-
-  return {
-    workers, tasks, history, loading, error,
-    upsertTask, updateTaskStatus, deleteTask, setWorkerStatus, resetData, addHistory,
-  };
+// Generate a stable but realistic set of tasks
+function tfDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setHours(12, 0, 0, 0);
+  return d.toISOString();
 }
 
-// ── Helpers (same as data.jsx) ──────────────────────────────────
+const TF_TASKS_SEED = [
+  // CLINICA
+  { title: "Revisión visual completa — Sra. Mendoza",        cat: "Clinica",        pri: "alta",    st: "proceso",     a: "w1", d: 0,  notes: "Cita 12:30. Revisar progresivos prescritos hace 6 meses." },
+  { title: "Adaptación de lentes de contacto multifocales",  cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w1", d: 1,  notes: "Primer ajuste, llevar muestra Air Optix Multifocal." },
+  { title: "Control postoperatorio LASIK — D. Romero",       cat: "Clinica",        pri: "alta",    st: "pendiente",   a: "w6", d: 2,  notes: "Día 14 post-cirugía. Verificar agudeza visual." },
+  { title: "Topografía corneal Sr. Ortega",                  cat: "Clinica",        pri: "media",   st: "completada",  a: "w1", d: -2 },
+  { title: "Examen pediátrico — Familia Ribas",              cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w6", d: 3 },
+
+  // AUDIOLOGIA
+  { title: "Adaptación audífonos Phonak Lumity",             cat: "Audiologia",     pri: "alta",    st: "proceso",     a: "w2", d: 0,  notes: "Cliente prueba 7 días, ajustar programas." },
+  { title: "Revisión audiometría tonal Sra. Quirós",         cat: "Audiologia",     pri: "media",   st: "pendiente",   a: "w2", d: 1 },
+  { title: "Mantenimiento técnico — audífonos Oticon",       cat: "Audiologia",     pri: "baja",    st: "pendiente",   a: "w2", d: 4 },
+  { title: "Seguimiento 30 días — Sr. Iglesias",             cat: "Seguimiento",    pri: "media",   st: "completada",  a: "w2", d: -1 },
+
+  // VENTAS
+  { title: "Presupuesto Tom Ford TF5398 + cristales Zeiss",  cat: "Ventas",         pri: "media",   st: "proceso",     a: "w3", d: 0 },
+  { title: "Llamada cliente — recordatorio gafas listas",    cat: "Ventas",         pri: "baja",    st: "pendiente",   a: "w7", d: 0 },
+  { title: "Entrega monturas Persol — Sr. Bonilla",          cat: "Ventas",         pri: "alta",    st: "urgente",     a: "w3", d: 0,  notes: "Cliente llega a las 17:00, prioridad máxima." },
+  { title: "Cierre venta progresivos premium familia López", cat: "Ventas",         pri: "alta",    st: "proceso",     a: "w7", d: 1 },
+  { title: "Catálogo nuevas Lindberg para showcase",         cat: "Ventas",         pri: "baja",    st: "pendiente",   a: "w3", d: 5 },
+  { title: "Devolución cristales defectuosos a proveedor",   cat: "Ventas",         pri: "media",   st: "bloqueada",   a: "w3", d: -1, notes: "Esperando autorización del proveedor." },
+
+  // TALLER
+  { title: "Montaje cristales Zeiss DriveSafe — pedido #4821", cat: "Taller",       pri: "alta",    st: "proceso",     a: "w4", d: 0 },
+  { title: "Reparación bisagra montura Cartier",             cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 1 },
+  { title: "Calibrado biselador automático",                 cat: "Taller",         pri: "alta",    st: "bloqueada",   a: "w4", d: -1, notes: "Falta pieza, llega martes." },
+  { title: "Tallado lentes pedido #4825",                    cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 2 },
+  { title: "Ajuste plaquetas titanium 12 monturas",          cat: "Taller",         pri: "baja",    st: "completada",  a: "w4", d: -3 },
+
+  // INCIDENCIAS
+  { title: "Cliente Sr. Vidal — queja por reflejos",         cat: "Incidencias",    pri: "critica", st: "urgente",     a: "w8", d: 0,  notes: "Llamar antes de las 11:00. Posible cambio de cristales." },
+  { title: "Pedido extraviado — proveedor Essilor",          cat: "Incidencias",    pri: "alta",    st: "bloqueada",   a: "w8", d: -1 },
+  { title: "Reclamación seguro Adeslas — Sra. Garrido",      cat: "Incidencias",    pri: "alta",    st: "proceso",     a: "w5", d: 1 },
+  { title: "Cristal roto en montaje — pedido #4810",         cat: "Incidencias",    pri: "media",   st: "completada",  a: "w4", d: -2 },
+
+  // SEGUIMIENTO
+  { title: "Encuesta satisfacción 23 clientes Octubre",      cat: "Seguimiento",    pri: "baja",    st: "pendiente",   a: "w5", d: 6 },
+  { title: "Recordatorio revisión anual — 14 pacientes",     cat: "Seguimiento",    pri: "media",   st: "proceso",     a: "w5", d: 2 },
+  { title: "Confirmación citas semana próxima",              cat: "Seguimiento",    pri: "media",   st: "pendiente",   a: "w5", d: 1 },
+  { title: "Llamada 6 meses post-adaptación lentillas",      cat: "Seguimiento",    pri: "baja",    st: "completada",  a: "w1", d: -4 },
+
+  // ADMINISTRACION
+  { title: "Cierre caja semanal — tienda Centro",            cat: "Administracion", pri: "alta",    st: "pendiente",   a: "w8", d: 0 },
+  { title: "Subir facturas Octubre a gestoría",              cat: "Administracion", pri: "media",   st: "proceso",     a: "w8", d: 2 },
+  { title: "Inventario monturas tienda Norte",               cat: "Administracion", pri: "media",   st: "pendiente",   a: "w5", d: 3 },
+  { title: "Renovar contrato proveedor cristales Hoya",      cat: "Administracion", pri: "alta",    st: "pendiente",   a: "w8", d: 4 },
+  { title: "Formación equipo — nueva caja registradora",     cat: "Administracion", pri: "baja",    st: "completada",  a: "w8", d: -5 },
+
+  // Mix extra
+  { title: "Reposición vitrina sol Ray-Ban — tienda Ensanche", cat: "Ventas",       pri: "baja",    st: "completada",  a: "w3", d: -1 },
+  { title: "Visita comercial proveedor Lindberg",            cat: "Ventas",         pri: "media",   st: "pendiente",   a: "w8", d: 5 },
+  { title: "Auditoría de lentes en stock",                   cat: "Administracion", pri: "media",   st: "proceso",     a: "w5", d: 1 },
+  { title: "Cliente sin cita — Sr. Hernández",               cat: "Clinica",        pri: "media",   st: "pendiente",   a: "w1", d: 0 },
+  { title: "Llamada técnica Phonak — software target",       cat: "Audiologia",     pri: "alta",    st: "proceso",     a: "w2", d: 0 },
+  { title: "Recogida producto envío Norte → Centro",         cat: "Taller",         pri: "media",   st: "pendiente",   a: "w4", d: 1 },
+];
+
+function tfBuildSeed() {
+  const tasks = TF_TASKS_SEED.map((t, i) => ({
+    id: `t${(i + 1).toString().padStart(3, "0")}`,
+    title: t.title,
+    notes: t.notes || "",
+    category: t.cat,
+    priority: t.pri,
+    status:   t.st,
+    dueDate:  tfDays(t.d ?? 0),
+    assignee: t.a,
+    createdBy: "w8",
+    createdAt: new Date(Date.now() - (40 - i) * 86400000 / 4).toISOString(),
+    updatedAt: new Date(Date.now() - (40 - i) * 86400000 / 8).toISOString(),
+    checklist: t.cat === "Clinica" ? [
+      { id: "c1", label: "Confirmar cita por SMS", done: i % 2 === 0 },
+      { id: "c2", label: "Preparar historial clínico", done: i % 3 === 0 },
+    ] : [],
+  }));
+  return { workers: TF_WORKERS_SEED, tasks };
+}
+
+function tfEnsureSeed() {
+  const meta = tfStorage.get(TF_KEYS.meta, null);
+  if (meta && meta.version === 1) return;
+  const seed = tfBuildSeed();
+  tfStorage.set(TF_KEYS.workers, seed.workers);
+  tfStorage.set(TF_KEYS.tasks,   seed.tasks);
+  tfStorage.set(TF_KEYS.history, [
+    { id: "h1", at: new Date().toISOString(), actor: "w8", action: "seed", payload: { tasks: seed.tasks.length } }
+  ]);
+  tfStorage.set(TF_KEYS.meta, { version: 1, seededAt: new Date().toISOString() });
+}
+
+// ── React hooks ──────────────────────────────────────────────────
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+function useStored(key, fallback) {
+  const [value, setValue] = useState(() => tfStorage.get(key, fallback));
+  const update = useCallback((updater) => {
+    setValue(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      tfStorage.set(key, next);
+      return next;
+    });
+  }, [key]);
+  return [value, update];
+}
+
+function useTaskflow() {
+  tfEnsureSeed();
+  const [workers, setWorkers] = useStored(TF_KEYS.workers, []);
+  const [tasks, setTasks]     = useStored(TF_KEYS.tasks, []);
+  const [history, setHistory] = useStored(TF_KEYS.history, []);
+
+  const addHistory = useCallback((action, payload, actor) => {
+    setHistory(h => [
+      { id: `h${Date.now()}`, at: new Date().toISOString(), action, payload, actor: actor || "w8" },
+      ...h,
+    ].slice(0, 200));
+  }, [setHistory]);
+
+  const upsertTask = useCallback((task, actor) => {
+    setTasks(ts => {
+      const exists = ts.find(t => t.id === task.id);
+      if (exists) {
+        return ts.map(t => t.id === task.id ? { ...t, ...task, updatedAt: new Date().toISOString() } : t);
+      }
+      const newTask = {
+        id: `t${Date.now().toString(36)}`,
+        notes: "",
+        checklist: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: actor || "w8",
+        ...task,
+      };
+      return [newTask, ...ts];
+    });
+    addHistory(task.id ? "update" : "create", { taskId: task.id, title: task.title }, actor);
+  }, [setTasks, addHistory]);
+
+  const updateTaskStatus = useCallback((taskId, status, actor) => {
+    setTasks(ts => ts.map(t => t.id === taskId ? { ...t, status, updatedAt: new Date().toISOString() } : t));
+    addHistory("status", { taskId, status }, actor);
+  }, [setTasks, addHistory]);
+
+  const deleteTask = useCallback((taskId, actor) => {
+    setTasks(ts => ts.filter(t => t.id !== taskId));
+    addHistory("delete", { taskId }, actor);
+  }, [setTasks, addHistory]);
+
+  const setWorkerStatus = useCallback((workerId, status) => {
+    setWorkers(ws => ws.map(w => w.id === workerId ? { ...w, status } : w));
+  }, [setWorkers]);
+
+  const resetData = useCallback(() => {
+    tfStorage.reset();
+    const seed = tfBuildSeed();
+    setWorkers(seed.workers);
+    setTasks(seed.tasks);
+    setHistory([{ id: "h1", at: new Date().toISOString(), actor: "w8", action: "reset", payload: {} }]);
+    tfStorage.set(TF_KEYS.meta, { version: 1, seededAt: new Date().toISOString() });
+  }, [setWorkers, setTasks, setHistory]);
+
+  return { workers, tasks, history, upsertTask, updateTaskStatus, deleteTask, setWorkerStatus, resetData, addHistory };
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+const TF_LABELS = {
+  status: {
+    pendiente: "Pendiente",
+    proceso: "En proceso",
+    bloqueada: "Bloqueada",
+    urgente: "Urgente",
+    completada: "Completada",
+  },
+  priority: {
+    baja: "Baja",
+    media: "Media",
+    alta: "Alta",
+    critica: "Crítica",
+  },
+  category: {
+    Clinica: "Clínica",
+    Ventas: "Ventas",
+    Audiologia: "Audiología",
+    Taller: "Taller",
+    Incidencias: "Incidencias",
+    Seguimiento: "Seguimiento",
+    Administracion: "Administración",
+  }
+};
+
 function tfFmtDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -206,32 +254,17 @@ function tfFmtDate(iso) {
   if (diff < -1 && diff > -7) return `Hace ${-diff} días`;
   return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
 }
-function tfFmtDateTime(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 function tfIsOverdue(task) {
-  if (task.status === "completada" || !task.dueDate) return false;
+  if (task.status === "completada") return false;
   return new Date(task.dueDate) < new Date(new Date().setHours(0, 0, 0, 0));
 }
-
-// ── Stub useStored — Supabase mode keeps UI prefs in localStorage still ──
-function useStored(key, fallback) {
-  const [value, setValue] = useState(() => {
-    try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; }
-  });
-  const update = useCallback((updater) => {
-    setValue(prev => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, [key]);
-  return [value, update];
+function tfFmtDateTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 Object.assign(window, {
-  TF_STORES, TF_CATS, TF_PRIOS, TF_STATUSES, TF_LABELS,
-  useTaskflow, useStored, tfFmtDate, tfFmtDateTime, tfIsOverdue,
-  tfSupabase
+  TF_KEYS, tfStorage, TF_STORES, TF_CATS, TF_PRIOS, TF_STATUSES,
+  TF_WORKERS_SEED, useTaskflow, TF_LABELS, tfFmtDate, tfFmtDateTime, tfIsOverdue, useStored
 });
