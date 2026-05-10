@@ -440,10 +440,16 @@ if (!loading && !currentUser) {
 /* ── Render ─────────────────────────────────────── */
 function Root() {
   const app = React.createElement(ToastProvider, null, React.createElement(App, null));
+
   if (window.__SUPABASE_READY && window.AuthGate) {
     return React.createElement(window.AuthGate, null, app);
   }
-  return app;
+
+  return React.createElement(
+    "div",
+    { style: { padding: 30, fontFamily: "Arial" } },
+    "Error: el sistema de acceso no se ha cargado."
+  );
 }
 
 const root = ReactDOM.createRoot(document.getElementById("app-root"));
