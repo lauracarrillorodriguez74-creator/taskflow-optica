@@ -304,11 +304,12 @@ function App() {
   const [mobileOpen,    setMobileOpen]    = useState(false);
 
   // currentUser: worker autenticado tiene prioridad
-  const currentUser = currentWorker
-    || workers.find(w => w.id === currentUserId)
-    || workers[0]
-    || null;
-
+ const currentUser = currentWorker
+  || workers.find(w => w.id === currentUserId)
+  || null;
+if (!loading && !currentUser) {
+  return <AuthGate />;
+}
   // Aplicar tema
   useEffect(() => {
     const r = document.documentElement;
