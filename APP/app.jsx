@@ -397,6 +397,36 @@ if (!loading && !currentUser) {
 
   return (
     <div className="tf-app" style={{ gridTemplateColumns:`${sideWidth} 1fr` }}>
+      <button
+  onClick={async () => {
+    const supa = window.__supabase || window.tfSupabase;
+
+    if (supa) {
+      await supa.auth.signOut();
+    }
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    window.location.href = "/";
+  }}
+  style={{
+    position: "fixed",
+    right: 16,
+    bottom: 80,
+    zIndex: 99999,
+    background: "#D14B43",
+    color: "white",
+    border: "none",
+    borderRadius: 999,
+    padding: "12px 18px",
+    fontWeight: 800,
+    boxShadow: "0 8px 24px rgba(0,0,0,.25)",
+    cursor: "pointer"
+  }}
+>
+  Salir
+</button>
       <Sidebar
         active={active} setActive={setActive}
         currentUser={currentUser} workers={workers} tasks={tasks}
