@@ -230,22 +230,27 @@ function TopBar({ active, onCreate, currentUser, onHamburger, onSwitchUser }) {
       </button>
 
       <button className="tf-btn tf-btn-pri" onClick={onCreate}>
-        <button
+  <Icon name="plus" size={14}/>
+  <span className="tf-btn-txt">Nueva tarea</span>
+</button>
+
+<button
   className="tf-btn"
   onClick={async () => {
     const supa = window.__supabase || window.tfSupabase;
 
-    await supa.auth.signOut();
+    if (supa) {
+      await supa.auth.signOut();
+    }
 
     localStorage.clear();
+    sessionStorage.clear();
 
     window.location.reload();
   }}
 >
   Salir
 </button>
-        <Icon name="plus" size={14}/><span className="tf-btn-txt">Nueva tarea</span>
-      </button>
 
       {/* Avatar en mobile */}
       <div style={{ display:"none" }} id="tf-mob-av">
