@@ -272,7 +272,7 @@ function UserSwitcher({ workers, currentUser, onPick, onClose }) {
       <div className="tf-card is-elevated" onClick={e => e.stopPropagation()}
            style={{ width:370, maxWidth:"calc(100vw - 28px)", padding:14, animation:"tf-fade-up .22s ease" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-          <div style={{ fontFamily:"var(--tf-display)", fontWeight:700, fontSize:15 }}>Cambiar usuario</div>
+          <div style={{ fontFamily:"var(--tf-display)", fontWeight:700, fontSize:15 }}>CAMBIAR USUARIO TEST</div>
           <button className="tf-btn-icon" onClick={onClose}><Icon name="close" size={16}/></button>
         </div>
 
