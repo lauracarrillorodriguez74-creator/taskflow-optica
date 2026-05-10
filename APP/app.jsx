@@ -231,7 +231,7 @@ function TopBar({ active, onCreate, currentUser, onHamburger, onSwitchUser }) {
 
       <button className="tf-btn tf-btn-pri" onClick={onCreate}>
   <Icon name="plus" size={14}/>
-  <span className="tf-btn-txt">Nueva tarea</span>
+  <span className="tf-btn-txt">NUEVA TAREA TEST</span>
 </button>
 
 <button
