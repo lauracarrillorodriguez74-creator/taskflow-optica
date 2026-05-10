@@ -2,20 +2,111 @@
 <html lang="es">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <meta name="theme-color" content="#1E5B94"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>TASKFLOW · Óptica PRO</title>
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
   <link rel="stylesheet" href="src/styles.css"/>
 
+  <style>
+    /* iPad shell */
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: radial-gradient(1200px 800px at 50% 30%, #0f2640, #050b14 70%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .stage {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      perspective: 2000px;
+    }
+    .ipad-bezel {
+      --ipad-w: 1366px;
+      --ipad-h: 1024px;
+      width: var(--ipad-w);
+      height: var(--ipad-h);
+      background: linear-gradient(160deg, #1c2330, #0a0e15);
+      border-radius: 38px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 1.5px rgba(255,255,255,.05) inset,
+        0 0 0 4px #000 inset,
+        0 60px 120px rgba(0,0,0,.6),
+        0 30px 60px rgba(0,0,0,.4);
+      position: relative;
+      transform-origin: center center;
+    }
+    .ipad-bezel::before, .ipad-bezel::after {
+      content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+      width: 6px; height: 6px; border-radius: 999px; background: #050708;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.1);
+    }
+    .ipad-bezel::before { top: 7px; }
+    .ipad-bezel::after  { bottom: 7px; }
+    .ipad-cam {
+      position: absolute;
+      left: 30px; top: 50%; transform: translateY(-50%);
+      width: 6px; height: 6px; border-radius: 999px;
+      background: #050708;
+      box-shadow: inset 0 0 0 1px #1f2a36, inset 0 0 0 2px #000;
+    }
+    .ipad-screen {
+      width: 100%; height: 100%;
+      border-radius: 26px;
+      overflow: hidden;
+      background: var(--tf-bg);
+      position: relative;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset;
+    }
+    /* Status bar (iPad) */
+    .ipad-status {
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 22px;
+      font: 600 12px/1 "Inter", sans-serif;
+      color: var(--tf-ink);
+      pointer-events: none;
+      z-index: 100;
+    }
+    .ipad-status .right { display: flex; gap: 6px; align-items: center; }
+    .ipad-status svg { vertical-align: middle; }
+    .ipad-content {
+      position: absolute;
+      inset: 22px 0 0 0;
+    }
+
+    /* Fullscreen mode */
+    body.fs-mode { padding: 0; background: var(--tf-bg); }
+    body.fs-mode .ipad-bezel {
+      width: 100vw; height: 100vh;
+      border-radius: 0; padding: 0;
+      box-shadow: none; background: transparent;
+    }
+    body.fs-mode .ipad-bezel::before,
+    body.fs-mode .ipad-bezel::after,
+    body.fs-mode .ipad-cam { display: none; }
+    body.fs-mode .ipad-screen { border-radius: 0; }
+    body.fs-mode .ipad-status { display: none; }
+    body.fs-mode .ipad-content { inset: 0; }
+
+    @media (max-width: 1450px) and (min-width: 0) {
+      body:not(.fs-mode) .ipad-bezel {
+        transform: scale(var(--ipad-scale, 1));
+      }
+    }
+  </style>
+
   <!-- ═══════════════════════════════════════════
-    SUPABASE — Pon aquí tus credenciales
-    Settings → API → Project URL + anon public key
+    SUPABASE — credenciales del proyecto
   ════════════════════════════════════════════════ -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -23,16 +114,7 @@
       url:     "https://rmskmkzjqjafzrzmcyfd.supabase.co",
       anonKey: "sb_publishable_4fdvvRiXZ2RdTblX6OKzmw_TgPXZLXC",
     };
-  </script>
 
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
-</head>
-<body>
-  <div id="app-root"></div>
-
-  <script>
     // Detectar si Supabase está configurado
     (function() {
       const cfg = window.SUPABASE_CONFIG || {};
@@ -44,7 +126,62 @@
     })();
   </script>
 
-  <!-- Orden de carga importa -->
+  <!-- React 18 + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+</head>
+<body>
+
+  <div class="stage" id="stage">
+    <div class="ipad-bezel" id="ipad" data-screen-label="TASKFLOW App">
+      <span class="ipad-cam"></span>
+      <div class="ipad-screen">
+        <div class="ipad-status">
+          <span>9:41</span>
+          <span class="right">
+            <svg width="14" height="11" viewBox="0 0 14 11" fill="currentColor"><rect x="0" y="7" width="2.4" height="4" rx="0.6"/><rect x="3.5" y="5" width="2.4" height="6" rx="0.6"/><rect x="7" y="3" width="2.4" height="8" rx="0.6"/><rect x="10.5" y="0.5" width="2.4" height="10.5" rx="0.6"/></svg>
+            <svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M1 4a10 10 0 0 1 12 0"/><path d="M3 6.5a7 7 0 0 1 8 0"/><path d="M5 9a4 4 0 0 1 4 0"/><circle cx="7" cy="10.4" r="0.7" fill="currentColor"/></svg>
+            <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.45"/><rect x="2" y="2" width="15" height="7" rx="1.2" fill="currentColor"/><rect x="19.2" y="3.5" width="1.4" height="4" rx="0.5" fill="currentColor" opacity="0.45"/></svg>
+          </span>
+        </div>
+        <div class="ipad-content">
+          <div id="app-root"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fitIpad() {
+      const ipad = document.getElementById('ipad');
+      if (document.body.classList.contains('fs-mode')) {
+        ipad.style.removeProperty('--ipad-scale');
+        return;
+      }
+      const padding = 48;
+      const sw = window.innerWidth - padding;
+      const sh = window.innerHeight - padding;
+      const scale = Math.min(sw / 1366, sh / 1024, 1);
+      ipad.style.setProperty('--ipad-scale', scale.toFixed(3));
+    }
+    window.addEventListener('resize', fitIpad);
+    window.addEventListener('load', fitIpad);
+    fitIpad();
+
+    window.addEventListener('tf-frame', (e) => {
+      if (e.detail === 'fullscreen') document.body.classList.add('fs-mode');
+      else document.body.classList.remove('fs-mode');
+      fitIpad();
+    });
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('__edit_mode_keys__') || '{}');
+      if (saved && saved.frame === 'fullscreen') document.body.classList.add('fs-mode');
+    } catch {}
+  </script>
+
+  <!-- Orden de carga: tweaks → data-supabase → auth → ui → screens → drawer → app -->
   <script type="text/babel" src="src/tweaks-panel.jsx"></script>
   <script type="text/babel" src="src/data-supabase.jsx"></script>
   <script type="text/babel" src="src/auth.jsx"></script>
@@ -52,5 +189,6 @@
   <script type="text/babel" src="src/screens.jsx"></script>
   <script type="text/babel" src="src/drawer.jsx"></script>
   <script type="text/babel" src="src/app.jsx"></script>
+
 </body>
 </html>
