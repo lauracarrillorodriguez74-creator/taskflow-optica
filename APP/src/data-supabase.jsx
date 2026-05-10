@@ -12,14 +12,25 @@
 // ─────────────────────────────────────────────────────────────────
 
 const TF_STORES   = ["Centro", "Ensanche", "Norte"];
-const TF_CATS     = ["Clinica", "Ventas", "Audiologia", "Taller", "Incidencias", "Seguimiento", "Administracion"];
+const TF_CATS = ["Clinica", "Ventas", "Audiologia", "Taller", "Incidencias", "Seguimiento", "Inventario", "Limpieza", "Administracion"];
 const TF_PRIOS    = ["baja", "media", "alta", "critica"];
 const TF_STATUSES = ["pendiente", "proceso", "bloqueada", "urgente", "completada"];
 
 const TF_LABELS = {
   status: { pendiente: "Pendiente", proceso: "En proceso", bloqueada: "Bloqueada", urgente: "Urgente", completada: "Completada" },
   priority: { baja: "Baja", media: "Media", alta: "Alta", critica: "Crítica" },
-  category: { Clinica: "Clínica", Ventas: "Ventas", Audiologia: "Audiología", Taller: "Taller", Incidencias: "Incidencias", Seguimiento: "Seguimiento", Administracion: "Administración" }
+  category: {
+  Clinica: "Clínica",
+  Ventas: "Ventas",
+  Audiologia: "Audiología",
+  Taller: "Taller",
+  Incidencias: "Incidencias",
+  Seguimiento: "Seguimiento",
+  Inventario: "Inventario",
+  Limpieza: "Limpieza",
+  Administracion: "Administración"
+}
+
 };
 
 // ── Supabase client ──────────────────────────────────────────────
