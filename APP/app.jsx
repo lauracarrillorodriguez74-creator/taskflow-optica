@@ -308,10 +308,9 @@ function App() {
   const [collapsed,     setCollapsed]     = useStored("tf:sidebar", false);
   const [mobileOpen,    setMobileOpen]    = useState(false);
 
-  // currentUser: worker autenticado tiene prioridad
- const currentUser = currentWorker
-  || workers.find(w => w.id === currentUserId)
-  || null;
+ // currentUser: SOLO trabajador autenticado
+const currentUser = currentWorker || null;
+
 if (!loading && !currentUser) {
   return <AuthGate />;
 }
