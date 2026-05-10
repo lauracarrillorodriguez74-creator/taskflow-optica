@@ -341,6 +341,14 @@ const currentUser = currentWorker || null;
 if (!loading && !currentUser) {
   return <AuthGate />;
 }
+
+  // ── Filtro de tareas según rol ──────────────────────────────
+  // Gerentes (Laura, Álvaro, Natalia) ven todo.
+  // El resto solo ve las tareas que tienen asignadas.
+  const isMgrUser = checkIsManager(currentUser);
+  const visibleTasks = isMgrUser
+    ? tasks
+    : tasks.filter(t => t.assignee === currentUser?.id);
   // Aplicar tema
   useEffect(() => {
     const r = document.documentElement;
@@ -429,7 +437,7 @@ if (!loading && !currentUser) {
 </button>
       <Sidebar
         active={active} setActive={setActive}
-        currentUser={currentUser} workers={workers} tasks={tasks}
+        currentUser={currentUser} workers={workers} tasks={visibleTasks}
         onSwitchUser={() => setShowSwitcher(true)}
         collapsed={collapsed} onToggle={() => setCollapsed(c => !c)}
         mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)}
@@ -444,9 +452,9 @@ if (!loading && !currentUser) {
         />
 
         <main className="tf-main tf-scroll">
-          {active==="dashboard"  && <Dashboard  tasks={tasks} workers={workers} onOpenTask={handleOpenTask} currentUser={currentUser}/>}
-          {active==="tasks"      && <TasksScreen tasks={tasks} workers={workers} onOpenTask={handleOpenTask} defaultView={t.defaultView} onCreate={handleCreate}/>}
-          {active==="workers"    && <WorkersScreen workers={workers} tasks={tasks} onSelectAssignee={() => setActive("tasks")}/>}
+          {active==="dashboard"  && <Dashboard  tasks={visibleTasks} workers={workers} onOpenTask={handleOpenTask} currentUser={currentUser}/>}
+          {active==="tasks"      && <TasksScreen tasks={visibleTasks} workers={workers} onOpenTask={handleOpenTask} defaultView={t.defaultView} onCreate={handleCreate} currentUser={currentUser}/>}
+          {active==="workers"    && <WorkersScreen workers={workers} tasks={visibleTasks} onSelectAssignee={() => setActive("tasks")} currentUser={currentUser}/>}
           {active==="management" && checkIsManager(currentUser) && <ManagementScreen tasks={tasks} workers={workers} history={history} currentUser={currentUser}/>}
           {active==="management" && !checkIsManager(currentUser) && (
             <div style={{ display:"grid", placeItems:"center", height:"100%", minHeight:400 }}>
@@ -461,7 +469,7 @@ if (!loading && !currentUser) {
           )}
         </main>
 
-        <BottomNav active={active} setActive={setActive} tasks={tasks} currentUser={currentUser}/>
+        <BottomNav active={active} setActive={setActive} tasks={visibleTasks} currentUser={currentUser}/>
       </div>
 
       <TaskDrawer

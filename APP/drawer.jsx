@@ -12,12 +12,28 @@ const TaskDrawer = ({ task, isCreating, workers, history, currentUser, onClose, 
   const [deleting, setDeleting]= useState(false);
 
   const isMgr = typeof checkIsManager === "function" && checkIsManager(currentUser);
+  // Categorías que un no-gerente puede usar al crear tareas
+  const workerCats = (typeof TF_WORKER_CATS !== "undefined" && TF_WORKER_CATS) || ["LlamarCliente", "Reclamar"];
+  const allowedCreateCats = isMgr ? TF_CATS : workerCats;
 
   useEffect(() => {
     if (task) {
       setDraft({ ...task }); setConfirm(false); setSaving(false);
     } else if (isCreating) {
-      setDraft({ title:"", notes:"", category: TF_CATS[0] || "Clinica", priority:"media", status:"pendiente", dueDate:new Date(Date.now()+86400000).toISOString(), assignee:currentUser?.id || workers[0]?.id || "", checklist:[] });
+      // Los trabajadores solo pueden crear tareas en sus categorías permitidas y
+      // auto-asignarse — los gerentes pueden elegir cualquier cosa.
+      const defaultCat = isMgr ? (TF_CATS[0] || "Clinica") : workerCats[0];
+      setDraft({
+        title:"",
+        notes:"",
+        category: defaultCat,
+        priority:"media",
+        status:"pendiente",
+        dueDate:new Date(Date.now()+86400000).toISOString(),
+        assignee: isMgr ? (currentUser?.id || workers[0]?.id || "") : (currentUser?.id || ""),
+        createdBy: currentUser?.id || null,
+        checklist:[]
+      });
       setSaving(false);
     }
   }, [task, isCreating]);
@@ -79,6 +95,11 @@ const TaskDrawer = ({ task, isCreating, workers, history, currentUser, onClose, 
                   Acceso gerente
                 </span>
               )}
+              {isCreating && !isMgr && (
+                <span style={{ fontSize:9, fontWeight:800, letterSpacing:".07em", color:"var(--tf-blue-700)", background:"var(--tf-blue-100)", borderRadius:4, padding:"1px 5px" }}>
+                  Llamar a cliente · Reclamar
+                </span>
+              )}
             </div>
             <input
               value={draft.title}
@@ -126,8 +147,15 @@ const TaskDrawer = ({ task, isCreating, workers, history, currentUser, onClose, 
             </label>
             <label className="tf-field">
               <span className="tf-field-label">Categoría</span>
-              <select className="tf-select" value={draft.category} onChange={e => set("category",e.target.value)} disabled={!canEdit}>
-                {TF_CATS.map(c => <option key={c} value={c}>{TF_LABELS.category[c]}</option>)}
+              <select
+                className="tf-select"
+                value={draft.category}
+                onChange={e => set("category",e.target.value)}
+                disabled={!canEdit || (isCreating && !isMgr)}
+              >
+                {(isCreating && !isMgr ? allowedCreateCats : TF_CATS).map(c => (
+                  <option key={c} value={c}>{TF_LABELS.category[c]}</option>
+                ))}
               </select>
             </label>
           </div>
@@ -145,9 +173,21 @@ const TaskDrawer = ({ task, isCreating, workers, history, currentUser, onClose, 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <label className="tf-field">
               <span className="tf-field-label">Asignado a</span>
-              <select className="tf-select" value={draft.assignee||""} onChange={e => set("assignee",e.target.value)} disabled={!canEdit}>
-                <option value="">Sin asignar</option>
-                {workers.map(wk => <option key={wk.id} value={wk.id}>{wk.name} · {wk.store}</option>)}
+              <select
+                className="tf-select"
+                value={draft.assignee||""}
+                onChange={e => set("assignee",e.target.value)}
+                disabled={!canEdit || (isCreating && !isMgr)}
+                title={isCreating && !isMgr ? "Solo gerentes pueden asignar tareas a otras personas" : ""}
+              >
+                {isCreating && !isMgr ? (
+                  currentUser && <option value={currentUser.id}>{currentUser.name} · {currentUser.store}</option>
+                ) : (
+                  <>
+                    <option value="">Sin asignar</option>
+                    {workers.map(wk => <option key={wk.id} value={wk.id}>{wk.name} · {wk.store}</option>)}
+                  </>
+                )}
               </select>
             </label>
             <label className="tf-field">
