@@ -44,10 +44,18 @@ const tfSupabase = (() => {
     console.error("[TASKFLOW] Falta supabase-js. Añade <script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>");
     return null;
   }
-  return window.supabase.createClient(cfg.url, cfg.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-    realtime: { params: { eventsPerSecond: 10 } },
-  });
+  window.__supabase = window.supabase.createClient(cfg.url, cfg.anonKey, {
+  auth: {
+    flowType: "pkce",
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "taskflow.auth",
+  },
+  realtime: { params: { eventsPerSecond: 10 } },
+});
+
+return window.__supabase;
 })();
 
 // Map row → in-memory task object (camelCase) consistent with data.jsx
