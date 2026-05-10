@@ -95,7 +95,20 @@ function useTaskflow() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+ const [session, setSession] = useState(null);
+ useEffect(() => {
+  if (!tfSupabase) return;
 
+  tfSupabase.auth.getSession().then(({ data }) => {
+    setSession(data.session ?? null);
+  });
+
+  const { data: sub } = tfSupabase.auth.onAuthStateChange((_event, s) => {
+    setSession(s);
+  });
+
+  return () => sub?.subscription?.unsubscribe();
+}, []);
   // Initial fetch + realtime subscriptions
   useEffect(() => {
     if (!tfSupabase) { setError("Supabase no configurado"); setLoading(false); return; }
@@ -239,10 +252,26 @@ function useTaskflow() {
     });
   }, []);
 
-  return {
-    workers, tasks, history, loading, error,
-    upsertTask, updateTaskStatus, deleteTask, setWorkerStatus, resetData, addHistory,
-  };
+  const currentWorker = useMemo(() => {
+  const uid = session?.user?.id;
+  if (!uid) return null;
+  return workers.find(w => w.authId === uid) || null;
+}, [workers, session]);
+
+return {
+  workers,
+  tasks,
+  history,
+  loading,
+  error,
+  currentWorker,
+  upsertTask,
+  updateTaskStatus,
+  deleteTask,
+  setWorkerStatus,
+  resetData,
+  addHistory,
+};
 }
 
 // ── Helpers (same as data.jsx) ──────────────────────────────────
