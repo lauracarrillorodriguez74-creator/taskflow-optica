@@ -300,6 +300,11 @@ function App() {
   const [creating,      setCreating]      = useState(false);
   const [showSwitcher,  setShowSwitcher]  = useState(false);
   const [currentUserId, setCurrentUserId] = useStored("tf:uid", null);
+  React.useEffect(() => {
+  if (!currentWorker) {
+    setCurrentUserId(null);
+  }
+}, [currentWorker]);
   const [collapsed,     setCollapsed]     = useStored("tf:sidebar", false);
   const [mobileOpen,    setMobileOpen]    = useState(false);
 
