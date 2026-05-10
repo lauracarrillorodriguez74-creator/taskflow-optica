@@ -276,7 +276,15 @@ function UserSwitcher({ workers, currentUser, onPick, onClose }) {
 
         {supa && (
           <div style={{ borderTop:"1px solid var(--tf-line)", paddingTop:10, marginTop:8 }}>
-            <button onClick={async () => { await supa.auth.signOut(); onClose(); }}
+            <button
+  onClick={async () => {
+    await supa.auth.signOut();
+
+    localStorage.removeItem("taskflow.auth");
+    localStorage.removeItem("tf:uid");
+
+    window.location.reload();
+  }}
                     style={{ width:"100%", padding:"9px 12px", borderRadius:9, border:"none", background:"var(--tf-red-100)", color:"var(--tf-red-700)", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:8, justifyContent:"center" }}>
               <Icon name="logout" size={14}/>Cerrar sesión
             </button>
