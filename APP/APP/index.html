@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#1E5B94"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <title>TASKFLOW · Óptica PRO</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="src/styles.css"/>
+
+  <!-- ═══════════════════════════════════════════
+    SUPABASE — Pon aquí tus credenciales
+    Settings → API → Project URL + anon public key
+  ════════════════════════════════════════════════ -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.SUPABASE_CONFIG = {
+      url:     "https://rmskmkzjqjafzrzmcyfd.supabase.co",
+      anonKey: "sb_publishable_4fdvvRiXZ2RdTblX6OKzmw_TgPXZLXC",
+    };
+  </script>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+</head>
+<body>
+  <div id="app-root"></div>
+
+  <script>
+    // Detectar si Supabase está configurado
+    (function() {
+      const cfg = window.SUPABASE_CONFIG || {};
+      window.__SUPABASE_READY = !!(
+        cfg.url && !cfg.url.includes('TU_') &&
+        cfg.anonKey && !cfg.anonKey.includes('TU_') &&
+        cfg.anonKey.length > 20
+      );
+    })();
+  </script>
+
+  <!-- Orden de carga importa -->
+  <script type="text/babel" src="src/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="src/data-supabase.jsx"></script>
+  <script type="text/babel" src="src/auth.jsx"></script>
+  <script type="text/babel" src="src/ui.jsx"></script>
+  <script type="text/babel" src="src/screens.jsx"></script>
+  <script type="text/babel" src="src/drawer.jsx"></script>
+  <script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
